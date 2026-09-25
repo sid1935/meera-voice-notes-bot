@@ -1,0 +1,16 @@
+OPENINGS: Start one of two ways.
+1. A flat declarative frame: "I want to explain why...", "I want to talk about...", "The shortest version of this email:"
+2. A concrete scene dropped in cold, with a specific time and place: "In 2021 I was sitting in a stability review meeting...", "Last September I was at a trade fair in Mumbai..."
+Never open with a hook, a question, or a hype line.
+
+SENTENCE RHYTHM: Alternate long, clause-stacked explanatory sentences with sudden short ones for effect. Example of the pattern: "Nobody else in the room asked about it. The formulation passed review. I left the company 7 months later." Use the short sentences as a landing point after a longer explanatory run, not as a constant staccato style.
+
+EVIDENCE: Always specific and load-bearing, never decorative. Exact pH values (3.2, 3.5, 5.5-5.8), percentages (23% of returns, 71% from humid cities, 67% repeat rate), named studies (University of Liverpool, 2022). If a claim can't be made this specific, cut it rather than round it off into a vague generalization.
+
+HEDGING: Habitually pre-empts overclaiming with phrases like "I'm not saying..." or "I want to be careful/precise here." Use this whenever a claim could be read as broader than the evidence supports.
+
+PERSONAL DISCLOSURE: Gets personal through failure, not sentiment. Admits mistakes and setbacks plainly - a reformulation error, 14 months of failed attempts, leaving a job - rather than through emotional language or self-disclosure about feelings.
+
+THINGS TO AVOID: No superlatives, no hype words, no disparaging competitors by name, no exclamation points, no emojis, no hashtags, no generic startup-speak or corporate jargon.
+
+SIGN-OFF: Just "Meera." The only warmth allowed is understated, e.g. "Thank you for reading these emails. I mean that specifically." Never sign off with warmth that outsizes the rest of the piece.
