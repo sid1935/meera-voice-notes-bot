@@ -1,8 +1,15 @@
 import { scoreNote, extractSearchPhrase, draftPost } from "../lib/gemini.js";
 import { fetchTopNewsArticle } from "../lib/news.js";
 import { sendMessage, sendChatAction } from "../lib/telegram.js";
+import {
+  saveNote,
+  saveDraft,
+  findPendingDraft,
+  updateDraftStatus,
+} from "../lib/supabase.js";
 
 const MIN_SCORE_TO_DRAFT = 6;
+const REVIEW_STATUS_BY_COMMAND = { approve: "approved", reject: "rejected" };
 
 function formatNewsFlag(newsItem) {
   return [
@@ -13,6 +20,36 @@ function formatNewsFlag(newsItem) {
     "⚠ Check this before publishing — you are the author of this claim",
     "─────────────────────────────────",
   ].join("\n");
+}
+
+async function handleReviewCommand(chatId, message, command) {
+  const status = REVIEW_STATUS_BY_COMMAND[command];
+  const replyToMessageId = message.reply_to_message?.message_id ?? null;
+
+  try {
+    const draft = await findPendingDraft({ chatId, replyToMessageId });
+    if (!draft) {
+      await sendMessage(
+        chatId,
+        "No pending draft to update — send a note first."
+      );
+      return;
+    }
+
+    await updateDraftStatus(draft.id, status);
+    await sendMessage(
+      chatId,
+      status === "approved"
+        ? "Marked as approved."
+        : "Marked as rejected — kept on file so I can see what to improve."
+    );
+  } catch (err) {
+    console.error("Failed to update draft status:", err);
+    await sendMessage(
+      chatId,
+      "Couldn't update that draft's status — please try again."
+    );
+  }
 }
 
 export default async function handler(req, res) {
@@ -63,20 +100,54 @@ export default async function handler(req, res) {
     if (text === "/start" || text === "/help") {
       await sendMessage(
         chatId,
-        "Send me a note — a raw thought, an update, anything — and I'll send back a drafted post written in your voice."
+        "Send me a note — a raw thought, an update, anything — and I'll send back a drafted post written in your voice. Reply APPROVE or REJECT to a draft to record what you thought of it."
       );
+      return;
+    }
+
+    const command = text.toLowerCase();
+    if (command === "approve" || command === "reject") {
+      await handleReviewCommand(chatId, message, command);
       return;
     }
 
     await sendChatAction(chatId, "typing");
 
     const { score, reason } = await scoreNote(text);
+
     if (score < MIN_SCORE_TO_DRAFT) {
+      try {
+        await saveNote({
+          chatId,
+          telegramMessageId: message.message_id,
+          text,
+          score,
+          reason,
+          status: "rejected",
+        });
+      } catch (dbErr) {
+        console.error("Failed to save rejected note:", dbErr);
+      }
+
       await sendMessage(
         chatId,
         `Didn't draft this one (${score}/10) — ${reason}`
       );
       return;
+    }
+
+    let note = null;
+    try {
+      note = await saveNote({
+        chatId,
+        telegramMessageId: message.message_id,
+        text,
+        score,
+        reason,
+        status: "accepted",
+      });
+    } catch (dbErr) {
+      console.error("Failed to save accepted note:", dbErr);
     }
 
     await sendChatAction(chatId, "typing");
@@ -98,7 +169,23 @@ export default async function handler(req, res) {
         ? `${draft}\n\n${formatNewsFlag(newsItem)}`
         : draft;
 
-    await sendMessage(chatId, reply);
+    const sentMessages = await sendMessage(chatId, reply);
+    const draftMessageId = sentMessages[0]?.message_id ?? null;
+
+    if (note) {
+      try {
+        await saveDraft({
+          noteId: note.id,
+          chatId,
+          draftText: draft,
+          usedNewsItem: Boolean(usedNewsItem && newsItem),
+          newsItem: usedNewsItem ? newsItem : null,
+          telegramMessageId: draftMessageId,
+        });
+      } catch (dbErr) {
+        console.error("Failed to save draft:", dbErr);
+      }
+    }
   } catch (err) {
     console.error("Failed to process update:", err);
     try {

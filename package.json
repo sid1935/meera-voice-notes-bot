@@ -8,9 +8,11 @@
   },
   "scripts": {
     "set-webhook": "node scripts/set-webhook.js",
-    "delete-webhook": "node scripts/set-webhook.js --delete"
+    "delete-webhook": "node scripts/set-webhook.js --delete",
+    "seed-voice-skill": "node scripts/seed-voice-skill.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.45.4"
   }
 }
