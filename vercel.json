@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/webhook.js": {
-      "includeFiles": "config/**"
+      "includeFiles": "config/**",
+      "maxDuration": 60
     }
   }
 }

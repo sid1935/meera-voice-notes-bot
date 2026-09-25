@@ -80,12 +80,16 @@ export default async function handler(req, res) {
   const message = update?.message;
   const chatId = message?.chat?.id;
 
-  // Always 200 back to Telegram quickly so it doesn't retry the update,
-  // even if we choose not to act on it.
-  res.status(200).send("ok");
+  if (!chatId) {
+    res.status(200).send("ok");
+    return;
+  }
 
-  if (!chatId) return;
-
+  // Respond to Telegram only once all processing (including the reply and
+  // any database writes) has finished. Vercel can freeze a serverless
+  // function's execution as soon as its HTTP response is sent, so replying
+  // early and then continuing to `await` work in the background is not
+  // reliable — that work can simply never run.
   try {
     if (!message.text) {
       await sendMessage(
@@ -196,5 +200,7 @@ export default async function handler(req, res) {
     } catch (sendErr) {
       console.error("Failed to send error message:", sendErr);
     }
+  } finally {
+    res.status(200).send("ok");
   }
 }
