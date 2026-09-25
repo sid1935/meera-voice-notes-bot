@@ -110,8 +110,7 @@ npx vercel
 
 (or connect the repo to Vercel via the dashboard for git-based deploys).
 
-In the Vercel project settings, add these environment variables (also listed
-in [`.env.example`](.env.example)):
+In the Vercel project settings, add these environment variables:
 
 - `TELEGRAM_BOT_TOKEN`
 - `GEMINI_API_KEY`
