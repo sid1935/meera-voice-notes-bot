@@ -1,17 +1,20 @@
 # Meera's Voice Notes Bot
 
-Meera texts a note to a Telegram bot. The bot sends it to Gemini along with
-her writing-voice instructions, and Gemini's drafted post comes back in the
-same chat.
+Meera texts a note to a Telegram bot. Gemini first scores the note on
+whether it's worth drafting (logistics reminders and abandoned thoughts get
+filtered out); if it scores well, Gemini drafts it into a post in Meera's
+voice and sends it back in the same chat.
 
 ## How it works
 
 ```
-Telegram message → Vercel function (api/webhook.js) → Gemini → Telegram reply
+Telegram message → Vercel function (api/webhook.js) → Gemini scores the note (0-10)
+  → below 6: rejection message sent back, stop
+  → 6 or above: Gemini drafts a post → Telegram reply
 ```
 
 - `api/webhook.js` — the serverless function Telegram calls on every message.
-- `lib/gemini.js` — builds the prompt (voice instructions + note) and calls Gemini.
+- `lib/gemini.js` — scores each note (0-10, with a one-line reason) and, if it passes, builds the prompt (voice instructions + note) and calls Gemini to draft it.
 - `lib/telegram.js` — sends messages back via the Telegram Bot API.
 - `config/voice-instructions.txt` — **edit this** with Meera's actual writing-voice instructions. It's a plain text file, read fresh on every draft — no code to touch, just redeploy after editing it.
 - `scripts/set-webhook.js` — one-time script to point Telegram at your deployed URL.
@@ -55,7 +58,7 @@ in [`.env.example`](.env.example)):
 
 - `TELEGRAM_BOT_TOKEN`
 - `GEMINI_API_KEY`
-- `GEMINI_MODEL` (optional, defaults to `gemini-2.5-flash`)
+- `GEMINI_MODEL` (optional, defaults to `gemini-3.8-flash`)
 - `TELEGRAM_WEBHOOK_SECRET` (optional but recommended — any random string)
 
 Redeploy after adding env vars so the function picks them up:

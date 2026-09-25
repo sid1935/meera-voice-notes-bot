@@ -1,4 +1,6 @@
-import { draftPost } from "../lib/gemini.js";
+import { scoreNote, draftPost } from "../lib/gemini.js";
+
+const MIN_SCORE_TO_DRAFT = 6;
 import { sendMessage, sendChatAction } from "../lib/telegram.js";
 
 export default async function handler(req, res) {
@@ -50,6 +52,17 @@ export default async function handler(req, res) {
       await sendMessage(
         chatId,
         "Send me a note — a raw thought, an update, anything — and I'll send back a drafted post written in your voice."
+      );
+      return;
+    }
+
+    await sendChatAction(chatId, "typing");
+
+    const { score, reason } = await scoreNote(text);
+    if (score < MIN_SCORE_TO_DRAFT) {
+      await sendMessage(
+        chatId,
+        `Didn't draft this one (${score}/10) — ${reason}`
       );
       return;
     }
