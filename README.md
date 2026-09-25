@@ -1,23 +1,53 @@
 # Meera's Voice Notes Bot
 
-Meera texts a note to a Telegram bot. Gemini first scores the note on
-whether it's worth drafting (logistics reminders and abandoned thoughts get
-filtered out); if it scores well, Gemini drafts it into a post in Meera's
-voice and sends it back in the same chat.
+Meera texts a note to a Telegram bot. Gemini scores the note on whether it's
+worth drafting (logistics reminders and abandoned thoughts get filtered
+out). If it passes, the bot looks for a relevant, current news item and
+hands it to Gemini alongside the note and Meera's voice instructions —
+Gemini only works it into the draft if it's genuinely relevant. The draft
+comes back in the same chat, with a verify-flag block attached whenever a
+news claim was used.
 
 ## How it works
 
 ```
-Telegram message → Vercel function (api/webhook.js) → Gemini scores the note (0-10)
-  → below 6: rejection message sent back, stop
-  → 6 or above: Gemini drafts a post → Telegram reply
+Telegram message
+  → Gemini scores the note (0-10)
+      → below 6: rejection message sent back, stop
+      → 6 or above: continue
+  → Gemini extracts a search phrase from the note
+  → Google News RSS is searched for that phrase (free, no key/account)
+  → Gemini drafts the post, using the top news result only if it's genuinely relevant
+  → if the news item was used, a NEWS SOURCE / verify-before-publishing block is appended
+  → Telegram reply
 ```
 
-- `api/webhook.js` — the serverless function Telegram calls on every message.
-- `lib/gemini.js` — scores each note (0-10, with a one-line reason) and, if it passes, builds the prompt (voice instructions + note) and calls Gemini to draft it.
+- `api/webhook.js` — the serverless function Telegram calls on every message; runs the full pipeline above.
+- `lib/gemini.js` — scores each note, extracts a news search phrase, and drafts the post (optionally incorporating a news item), all via Gemini.
+- `lib/news.js` — searches Google News' public RSS feed and returns the top result's headline, source, date, link, and a one-line summary. No API key or account needed.
 - `lib/telegram.js` — sends messages back via the Telegram Bot API.
 - `config/voice-instructions.txt` — **edit this** with Meera's actual writing-voice instructions. It's a plain text file, read fresh on every draft — no code to touch, just redeploy after editing it.
 - `scripts/set-webhook.js` — one-time script to point Telegram at your deployed URL.
+
+### The verify-flag block
+
+Any draft that actually uses a news item gets this appended automatically —
+this is not optional, since a fact published in Meera's name that she
+hasn't personally checked is exactly the failure this pipeline exists to
+prevent:
+
+```
+─────────────────────────────────
+NEWS SOURCE: [headline]
+FROM: [publication] · [date]
+LINK: [url]
+⚠ Check this before publishing — you are the author of this claim
+─────────────────────────────────
+```
+
+If the news lookup fails (timeout, no results) or Gemini judges the top
+result isn't a natural fit for the note, drafting proceeds exactly as
+before with no news item and no verify-flag block.
 
 ## Setup
 

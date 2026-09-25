@@ -1,7 +1,19 @@
-import { scoreNote, draftPost } from "../lib/gemini.js";
+import { scoreNote, extractSearchPhrase, draftPost } from "../lib/gemini.js";
+import { fetchTopNewsArticle } from "../lib/news.js";
+import { sendMessage, sendChatAction } from "../lib/telegram.js";
 
 const MIN_SCORE_TO_DRAFT = 6;
-import { sendMessage, sendChatAction } from "../lib/telegram.js";
+
+function formatNewsFlag(newsItem) {
+  return [
+    "─────────────────────────────────",
+    `NEWS SOURCE: ${newsItem.headline}`,
+    `FROM: ${newsItem.source} · ${newsItem.date || "date unknown"}`,
+    `LINK: ${newsItem.url}`,
+    "⚠ Check this before publishing — you are the author of this claim",
+    "─────────────────────────────────",
+  ].join("\n");
+}
 
 export default async function handler(req, res) {
   if (req.method === "GET") {
@@ -68,8 +80,25 @@ export default async function handler(req, res) {
     }
 
     await sendChatAction(chatId, "typing");
-    const draft = await draftPost(text);
-    await sendMessage(chatId, draft);
+
+    let newsItem = null;
+    try {
+      const { searchPhrase } = await extractSearchPhrase(text);
+      newsItem = await fetchTopNewsArticle(searchPhrase);
+    } catch (newsErr) {
+      console.error("News lookup failed, continuing without it:", newsErr);
+      newsItem = null;
+    }
+
+    await sendChatAction(chatId, "typing");
+    const { draft, usedNewsItem } = await draftPost(text, newsItem);
+
+    const reply =
+      usedNewsItem && newsItem
+        ? `${draft}\n\n${formatNewsFlag(newsItem)}`
+        : draft;
+
+    await sendMessage(chatId, reply);
   } catch (err) {
     console.error("Failed to process update:", err);
     try {
